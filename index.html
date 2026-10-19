@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stash: your documents, kept</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#eef2f1;--sf:#fff;--ink:#14232b;--mu:#5b6b72;--ln:#d3dcdb;--ac:#2f5bea;--on:#fff;--dg:#b3261e}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1a1f;--sf:#18262d;--ink:#e8f0f0;--mu:#98a9af;--ln:#2b3c44;--ac:#7b9bff;--on:#0f1a1f;--dg:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:2.2rem;margin:0 0 6px;letter-spacing:-.02em}h3{margin:0}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:16px;margin-bottom:14px}
+label{display:block;font-weight:600;font-size:.9rem;margin:10px 0 4px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:10px 12px}
+input[type=checkbox]{width:auto}textarea{min-height:80px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:10px 16px;cursor:pointer;background:var(--ac);color:var(--on)}
+.ghost{background:transparent;color:var(--ink);border:1px solid var(--ln)}.small{padding:6px 10px;font-size:.85rem}
+.danger{background:transparent;color:var(--dg);border:1px solid var(--ln)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px}
+.tabs{display:flex;gap:6px;margin-bottom:8px}.tabs .on{background:var(--ink);color:var(--bg)}
+.pw{position:relative}.pw input{padding-right:80px}.pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0}
+.meta,.mu{color:var(--mu);font-size:.85rem}.msg{color:var(--dg);min-height:1.3em;margin:8px 0}
+.note{background:var(--sf);border:1px dashed var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:.9rem}
+.item{border-left:5px solid var(--ac)}pre{white-space:pre-wrap;word-break:break-word;font:inherit;margin:8px 0}
+.hide{display:none}:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+</style>
+</head>
+<body><main>
+
+<section id="auth">
+  <h1>Stash</h1><p class="mu">A private place for your documents and information. Save once, find anytime.</p>
+  <div class="card">
+    <div class="tabs"><button id="tL" class="on" type="button">Log in</button><button id="tS" class="ghost" type="button">Create account</button></div>
+    <div id="sg" class="hide"><label for="nm">Your name</label><input id="nm" autocomplete="name"></div>
+    <label for="em">Email</label><input id="em" type="email" autocomplete="email">
+    <label for="pw">Password</label><div class="pw"><input id="pw" type="password" autocomplete="current-password"><button id="eye" type="button" class="ghost small">Show</button></div>
+    <div id="sg2" class="hide">
+      <label for="ph">Mobile number (for recovery)</label><input id="ph" type="tel" autocomplete="tel">
+      <label for="q1">Security question 1</label><select id="q1"></select><input id="a1" aria-label="Answer 1" style="margin-top:6px">
+      <label for="q2">Security question 2</label><select id="q2"></select><input id="a2" aria-label="Answer 2" style="margin-top:6px">
+      <label style="margin-top:12px"><input type="checkbox" id="ag"> I agree to the Terms of use and Privacy policy.</label>
+    </div>
+    <p id="msg" class="msg" role="alert"></p>
+    <div class="row"><button id="go" type="button">Log in</button><button id="fg" class="ghost small" type="button">Forgot password?</button></div>
+  </div>
+</section>
+
+<section id="rec" class="hide card">
+  <h3>Reset your password</h3><p class="mu">Answer your security questions, then choose a new password.</p>
+  <label id="rq1" for="r1"></label><input id="r1"><label id="rq2" for="r2"></label><input id="r2">
+  <label for="rn">New password</label><input id="rn" type="password" autocomplete="new-password">
+  <p id="rmsg" class="msg" role="alert"></p><button id="rgo" type="button">Set new password</button>
+</section>
+
+<section id="app" class="hide">
+  <div class="top"><div><h1 id="hi" style="font-size:1.7rem;margin:0"></h1><div class="mu" id="cnt"></div></div>
+    <div class="row"><button id="adb" class="ghost small hide" type="button">Admin</button><button id="out" class="ghost small" type="button">Log out</button></div></div>
+  <div id="rem"></div>
+  <details class="card" open><summary><b>Add something</b></summary>
+    <label for="ti">Title</label><input id="ti">
+    <label for="fo">Folder</label><input id="fo">
+    <label for="tg">Tags (comma separated)</label><input id="tg">
+    <label for="ex">Expires on (optional)</label><input id="ex" type="date">
+    <label for="bd">Notes</label><textarea id="bd"></textarea>
+    <label for="fl">Document (optional, up to 1.5 MB)</label><input id="fl" type="file">
+    <p id="amsg" class="msg" role="alert"></p><button id="add" type="button">Save to stash</button>
+  </details>
+  <input id="q" type="search" placeholder="Search your stash" aria-label="Search" style="margin-bottom:12px">
+  <div id="list"></div>
+</section>
+
+<section id="adm" class="hide">
+  <div class="top"><h1 style="font-size:1.7rem;margin:0">Admin</h1><button id="adx" class="ghost small" type="button">Back</button></div>
+  <p class="note">You can see accounts and storage size, never document contents.</p><div id="au"></div>
+</section>
+
+<p class="note">Need help? <a href="mailto:taonaishejayden896@gmail.com">taonaishejayden896@gmail.com</a> · <a href="tel:0778073053">0778073053</a></p>
+</main>
+<script>
+var SB_URL='https://hvsgbrbaudcezgamgrhh.supabase.co',SB_KEY='sb_publishable_lp5BVEibh2s2blvvM0wSrA_CW_hVuuS';
+var sb=supabase.createClient(SB_URL,SB_KEY),$=function(i){return document.getElementById(i)};
+var M=null,P=null,RP=null,V=[],mode='login',te=new TextEncoder(),td=new TextDecoder();
+var QS=['What was your first pet’s name?','What city were you born in?','What was your first school called?','What is your mother’s maiden name?','What was your childhood nickname?'];
+['q1','q2'].forEach(function(id,n){$(id).innerHTML=QS.map(function(q,i){return'<option value="'+i+'"'+(i===n?' selected':'')+'>'+q+'</option>'}).join('')});
+
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+function show(id){['auth','rec','app','adm'].forEach(function(x){$(x).className=x===id?'':'hide'})}
+function msg(m,id){$(id||'msg').textContent=m}
+function b64(a){var s='',u=new Uint8Array(a);for(var i=0;i<u.length;i+=8192)s+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(s)}
+function unb(s){return Uint8Array.from(atob(s),function(c){return c.charCodeAt(0)})}
+function norm(a,b){return a.trim().toLowerCase()+'|'+b.trim().toLowerCase()}
+function rnd(n){return crypto.getRandomValues(new Uint8Array(n))}
+async function base(pw){return crypto.subtle.importKey('raw',te.encode(pw),'PBKDF2',false,['deriveBits','deriveKey'])}
+async function kdf(pw,salt){return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:200000,hash:'SHA-256'},await base(pw),{name:'AES-GCM',length:256},false,['wrapKey','unwrapKey'])}
+// The server never sees your real password: it gets a separate value derived from it.
+async function authPw(pw,em){var bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:te.encode('stash-auth:'+em),iterations:200000,hash:'SHA-256'},await base(pw),256);return Array.from(new Uint8Array(bits)).map(function(x){return x.toString(16).padStart(2,'0')}).join('')}
+async function wrap(m,k){var iv=rnd(12);return b64(iv)+'.'+b64(await crypto.subtle.wrapKey('raw',m,k,{name:'AES-GCM',iv:iv}))}
+function unwrap(s,k){var p=s.split('.');return crypto.subtle.unwrapKey('raw',unb(p[1]),k,{name:'AES-GCM',iv:unb(p[0])},{name:'AES-GCM',length:256},true,['encrypt','decrypt'])}
+async function enc(o){var iv=rnd(12);return b64(iv)+'.'+b64(await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},M,te.encode(JSON.stringify(o))))}
+async function dec(s){var p=s.split('.');return JSON.parse(td.decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:unb(p[0])},M,unb(p[1]))))}
+
+function setMode(m){mode=m;$('tL').className=m==='login'?'on':'ghost';$('tS').className=m==='sign'?'on':'ghost';
+  $('sg').className=$('sg2').className=m==='sign'?'':'hide';$('go').textContent=m==='login'?'Log in':'Create account';msg('')}
+$('tL').onclick=function(){setMode('login')};$('tS').onclick=function(){setMode('sign')};
+$('eye').onclick=function(){var s=$('pw').type==='password';$('pw').type=s?'text':'password';this.textContent=s?'Hide':'Show'};
+
+$('go').onclick=async function(){
+  msg('');var em=$('em').value.trim().toLowerCase(),pw=$('pw').value;
+  if(!em||pw.length<8)return msg('Enter an email and a password of at least 8 characters.');
+  if(mode==='sign'){
+    var ph=$('ph').value.trim(),a1=$('a1').value,a2=$('a2').value,q1=$('q1').value,q2=$('q2').value;
+    if(!$('ag').checked)return msg('Tick the box to agree to the Terms and Privacy policy.');
+    if(ph.replace(/\D/g,'').length<7||!a1.trim()||!a2.trim()||q1===q2)return msg('Add a mobile number and answer two different security questions.');
+    var salt=rnd(16),s2=rnd(16),m=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+    var meta={name:$('nm').value.trim()||'friend',phone:ph,salt:b64(salt),salt2:b64(s2),wp:await wrap(m,await kdf(pw,salt)),wq:await wrap(m,await kdf(norm(a1,a2),s2)),q1:+q1,q2:+q2};
+    var r=await sb.auth.signUp({email:em,password:await authPw(pw,em),options:{data:meta,emailRedirectTo:location.origin+location.pathname}});
+    if(r.error)return msg(r.error.message);
+    msg('Almost done. Check your email and tap the confirmation link, then log in.');
+  }else{
+    var l=await sb.auth.signInWithPassword({email:em,password:await authPw(pw,em)});
+    if(l.error)return msg('Email or password is wrong, or the email is not confirmed yet.');
+    await start(pw);
+  }
+};
+async function start(pw){
+  var u=(await sb.auth.getUser()).data.user,r=await sb.from('profiles').select('*').eq('id',u.id).single(),p=r.data;
+  if(!p||p.suspended){await sb.auth.signOut();return msg('This account is suspended or not set up. Contact support.')}
+  try{M=await unwrap(p.wp,await kdf(pw,unb(p.salt)))}catch(e){await sb.auth.signOut();return msg('Could not unlock your data.')}
+  P=p;$('pw').value='';$('hi').textContent='Hi, '+(p.name||'friend');$('adb').className=p.is_admin?'ghost small':'hide';
+  show('app');await load();
+}
+async function load(){
+  var r=await sb.from('items').select('id,data,created_at').order('created_at',{ascending:false});V=[];
+  for(var i=0;i<(r.data||[]).length;i++){try{var o=await dec(r.data[i].data);o.id=r.data[i].id;V.push(o)}catch(e){}}
+  render();
+}
+function render(){
+  var q=$('q').value.toLowerCase(),rem='';
+  V.forEach(function(i){if(!i.exp)return;var d=Math.ceil((new Date(i.exp+'T23:59:59')-Date.now())/864e5);
+    if(d<0)rem+='<div class="note"><b>Expired:</b> '+esc(i.title)+'</div>';else if(d<=30)rem+='<div class="note"><b>Expiring in '+d+' days:</b> '+esc(i.title)+'</div>'});
+  $('rem').innerHTML=rem;$('cnt').textContent=V.length+(V.length===1?' item':' items')+' saved';
+  $('list').innerHTML=V.filter(function(i){return!q||(i.title+' '+i.body+' '+i.folder+' '+(i.tags||[]).join(' ')).toLowerCase().indexOf(q)>-1}).map(function(i){
+    return'<div class="card item"><h3>'+esc(i.title)+'</h3><div class="meta">'+esc(i.folder||'Unsorted')+' · '+esc(i.date)+(i.exp?' · expires '+esc(i.exp):'')+'</div>'+
+    (i.tags&&i.tags.length?'<div class="meta">'+i.tags.map(esc).join(', ')+'</div>':'')+(i.body?'<pre>'+esc(i.body)+'</pre>':'')+
+    '<div class="row">'+(i.files||[]).map(function(f,k){return'<button class="small ghost" data-d="'+i.id+'" data-k="'+k+'" type="button">Download '+esc(f.name)+'</button>'}).join('')+
+    '<button class="small danger" data-r="'+i.id+'" type="button">Delete</button></div></div>'}).join('')||'<div class="note">Your stash is empty. Add your first item above.</div>';
+}
+$('q').oninput=render;
+$('list').onclick=async function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.d){var it=V.filter(function(x){return x.id===b.dataset.d})[0],f=it.files[b.dataset.k],a=document.createElement('a');a.href=f.data;a.download=f.name;document.body.appendChild(a);a.click();a.remove()}
+  else if(b.dataset.r){if(!confirm('Delete this item? This can’t be undone.'))return;await sb.from('items').delete().eq('id',b.dataset.r);await load()}
+};
+$('add').onclick=async function(){
+  var ti=$('ti').value.trim(),bd=$('bd').value.trim(),f=$('fl').files[0];msg('','amsg');
+  if(!ti||(!bd&&!f))return msg('Add a title and either notes or a document.','amsg');
+  if(f&&f.size>1500000)return msg('That file is over 1.5 MB.','amsg');
+  var files=[];if(f)files.push({name:f.name,data:await new Promise(function(res){var r=new FileReader();r.onload=function(){res(r.result)};r.readAsDataURL(f)})});
+  var o={title:ti,folder:$('fo').value.trim(),tags:$('tg').value.split(',').map(function(s){return s.trim()}).filter(Boolean),exp:$('ex').value,body:bd,files:files,date:new Date().toLocaleDateString()};
+  var r=await sb.from('items').insert({data:await enc(o)});
+  if(r.error)return msg(r.error.code==='42501'?'You have reached the Free plan limit of 30 items. Contact support to upgrade.':r.error.message,'amsg');
+  ['ti','fo','tg','ex','bd','fl'].forEach(function(i){$(i).value=''});await load();
+};
+$('out').onclick=async function(){await sb.auth.signOut();M=P=null;V=[];show('auth');setMode('login')};
+
+// Forgot password: email link, then security answers unlock your key so nothing is lost.
+$('fg').onclick=async function(){
+  var em=$('em').value.trim().toLowerCase();if(!em)return msg('Type your email above first.');
+  var r=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+  msg(r.error?r.error.message:'If that email has an account, a reset link is on its way.');
+};
+sb.auth.onAuthStateChange(async function(ev,s){
+  if(ev!=='PASSWORD_RECOVERY')return;
+  var r=await sb.from('profiles').select('*').eq('id',s.user.id).single();RP=r.data;RP.email=s.user.email;
+  $('rq1').textContent=QS[RP.q1];$('rq2').textContent=QS[RP.q2];show('rec');
+});
+$('rgo').onclick=async function(){
+  var np=$('rn').value;if(np.length<8)return msg('Use at least 8 characters.','rmsg');
+  var m;try{m=await unwrap(RP.wq,await kdf(norm($('r1').value,$('r2').value),unb(RP.salt2)))}catch(e){return msg('Those answers don’t match. Check spelling and try again.','rmsg')}
+  var ns=rnd(16),wp=await wrap(m,await kdf(np,ns));
+  var u=await sb.auth.updateUser({password:await authPw(np,RP.email)});if(u.error)return msg(u.error.message,'rmsg');
+  var p=await sb.from('profiles').update({salt:b64(ns),wp:wp}).eq('id',RP.id);if(p.error)return msg(p.error.message,'rmsg');
+  await sb.auth.signOut();show('auth');setMode('login');msg('Password reset. Log in with your new password.');
+};
+
+// Admin
+$('adb').onclick=admin;$('adx').onclick=function(){show('app')};
+async function admin(){
+  show('adm');var r=await sb.rpc('admin_users');
+  if(r.error){$('au').innerHTML='<div class="note">'+esc(r.error.message)+'</div>';return}
+  $('au').innerHTML=r.data.map(function(u){return'<div class="card"><h3>'+esc(u.uname)+(u.suspended?' (suspended)':'')+'</h3><div class="meta">'+esc(u.email)+' · '+(u.phone?'••••'+esc(u.phone.slice(-4)):'no phone')+' · joined '+new Date(u.joined).toLocaleDateString()+' · '+u.n_items+' items · '+Math.round(u.n_bytes/1024)+' KB · '+u.plan+' plan</div><div class="row" style="margin-top:8px"><button class="small ghost" data-s="'+u.uid+'" type="button">'+(u.suspended?'Reinstate':'Suspend')+'</button><button class="small ghost" data-p="'+u.uid+'" data-v="'+(u.plan==='plus'?'free':'plus')+'" type="button">Make '+(u.plan==='plus'?'Free':'Plus')+'</button></div></div>'}).join('');
+}
+$('au').onclick=async function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.s)await sb.rpc('admin_toggle_suspend',{target:b.dataset.s});
+  else if(b.dataset.p)await sb.rpc('admin_set_plan',{target:b.dataset.p,newplan:b.dataset.v});
+  admin();
+};
+</script>
+</body>
+</html>
